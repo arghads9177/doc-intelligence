@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app.routes.analyze import router as analyze_router
 
 # Configure logging
 logging.basicConfig(
@@ -112,6 +113,9 @@ def create_app() -> FastAPI:
             status_code=500,
             content={"status": "error", "message": "Internal server error"},
         )
+
+    # Include routers
+    app.include_router(analyze_router)
 
     logger.info("✓ FastAPI app created successfully")
     return app
