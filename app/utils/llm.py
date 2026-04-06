@@ -7,6 +7,9 @@ This ensures consistent configuration and single point of LLM management.
 
 import os
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def get_llm() -> ChatOpenAI:
