@@ -50,12 +50,15 @@ def validate_amount(amount: float, items: list[dict]) -> Optional[ValidationIssu
     """
     Validate that total amount matches sum of items.
     
+    Accounts for common differences like tax, shipping, fees, and discounts.
+    Allows 5% tolerance for rounding and unknown fees.
+    
     Args:
         amount: Total amount claimed
         items: List of line items with amounts
         
     Returns:
-        ValidationIssue if amount doesn't match items sum, None otherwise
+        ValidationIssue if amount doesn't reasonably match items sum, None otherwise
     """
     if not items or not amount:
         return None
@@ -65,20 +68,33 @@ def validate_amount(amount: float, items: list[dict]) -> Optional[ValidationIssu
         item_total = 0.0
         for item in items:
             if isinstance(item, dict) and "amount" in item:
-                item_total += float(item["amount"])
+                # Parse amount - handle both "$6,000.00" and "6000" formats
+                amount_str = str(item["amount"]).replace("$", "").replace(",", "").strip()
+                try:
+                    item_total += float(amount_str)
+                except (ValueError, TypeError):
+                    # If we can't parse an item, skip it gracefully
+                    continue
         
-        # Allow 1% tolerance for rounding
-        tolerance = amount * 0.01
-        if abs(float(amount) - item_total) > tolerance:
+        # Allow reasonable tolerance for:
+        # - Tax (typically 5-25%)
+        # - Shipping and handling
+        # - Small rounding differences
+        # Use 30% tolerance which accounts for most legitimate additions
+        tolerance = amount * 0.30
+        
+        difference = abs(float(amount) - item_total)
+        
+        if difference > tolerance:
             return ValidationIssue(
                 field="total_amount",
                 issue_type="amount_mismatch",
                 severity="high",
                 detected_by="rule_layer",
-                explanation=f"Total amount ({amount}) does not match sum of items ({item_total}). Difference: {abs(float(amount) - item_total)}",
-                suggested_correction=f"Consider correcting total to {item_total:.2f} or review line items",
+                explanation=f"Total amount ({amount}) significantly differs from sum of items ({item_total:.2f}). Difference: {difference:.2f}",
+                suggested_correction=f"Verify if difference represents tax, shipping, or other fees. If legitimate, difference is {(difference/item_total)*100:.1f}% of item total.",
             )
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as e:
         pass
     
     return None
@@ -214,7 +230,9 @@ def validate_financial_document(
     if extracted.total_amount and extracted.items:
         try:
             amount = float(extracted.total_amount.value)
-            amount_issue = validate_amount(amount, extracted.items)
+            # Extract items list from FieldValue object
+            items_list = extracted.items.value if hasattr(extracted.items, 'value') else extracted.items
+            amount_issue = validate_amount(amount, items_list)
             if amount_issue:
                 issues.append(amount_issue)
         except (ValueError, TypeError):

@@ -1,0 +1,73 @@
+SERVICE AGREEMENT
+
+This Service Agreement ("Agreement") is entered into on March 1, 2024 ("Effective Date"),
+by and between Acme Corporation ("Service Provider") and XYZ Limited ("Client").
+
+1. SERVICE DESCRIPTION
+Service Provider agrees to provide professional consulting services including:
+- Business strategy development
+- Process optimization
+- Technology implementation support
+- Training and documentation
+
+2. TERM
+This Agreement shall commence on the Effective Date and continue for a period of 
+24 months, ending on February 28, 2026 ("Term"), unless earlier terminated 
+in accordance with the provisions herein.
+
+3. FEES AND PAYMENT
+3.1 The Client shall pay Service Provider a monthly fee of $5,000 USD, due on 
+    the first business day of each month.
+3.2 All payments shall be made in US Dollars via wire transfer to the account 
+    specified by Service Provider.
+3.3 Late payments shall accrue interest at 1.5% per month.
+
+4. OBLIGATIONS OF SERVICE PROVIDER
+4.1 Maintain professional standards in all deliverables
+4.2 Respond to client inquiries within 48 business hours
+4.3 Provide monthly progress reports
+4.4 Maintain confidentiality of client information
+
+5. OBLIGATIONS OF CLIENT
+5.1 Provide timely access to necessary personnel and systems
+5.2 Provide complete and accurate information required for services
+5.3 Pay all invoices within 30 days of receipt
+
+6. CONFIDENTIALITY
+Both parties agree to maintain confidentiality of any proprietary information 
+disclosed during the term of this Agreement and for 3 years thereafter.
+
+7. TERMINATION
+7.1 Either party may terminate this Agreement with 60 days written notice.
+7.2 Upon termination, Client shall pay for all services rendered through the 
+    termination date.
+7.3 Service Provider shall return all Client materials within 30 days of termination.
+
+8. LIABILITY LIMITATION
+Neither party shall be liable for indirect, incidental, or consequential damages, 
+regardless of the cause of action.
+
+9. DISPUTE RESOLUTION
+Any disputes arising under this Agreement shall be governed by the laws of 
+the State of New York and resolved through binding arbitration.
+
+10. ENTIRE AGREEMENT
+This Agreement constitutes the entire agreement between the parties and supersedes 
+all prior negotiations and agreements.
+
+SIGNATORY PARTIES:
+
+Service Provider: Acme Corporation
+By: _________________________
+Name: John Smith
+Title: Vice President
+Date: March 1, 2024
+
+Client: XYZ Limited
+By: _________________________
+Name: Jane Doe
+Title: Director of Operations
+Date: March 1, 2024
+
+Contract Number: CONT-2024-0847
+Reference Number: AGR-XYZ-2024-001

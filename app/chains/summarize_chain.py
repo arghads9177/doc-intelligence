@@ -218,7 +218,13 @@ def _format_extraction(extracted: Union[ExtractedFinancial, ExtractedContract]) 
         date = extracted.date.value if extracted.date else "Unknown date"
         amount = extracted.total_amount.value if extracted.total_amount else "Unknown"
         currency = extracted.currency.value if extracted.currency else ""
-        items_count = len(extracted.items) if extracted.items else 0
+        
+        # Handle items - now it's a FieldValue with value property containing the list
+        items_count = 0
+        if extracted.items:
+            items_list = extracted.items.value if hasattr(extracted.items, 'value') else extracted.items
+            items_count = len(items_list) if items_list else 0
+        
         invoice_num = extracted.invoice_number.value if extracted.invoice_number else "N/A"
         
         return (
@@ -236,7 +242,12 @@ def _format_extraction(extracted: Union[ExtractedFinancial, ExtractedContract]) 
         effective_date = extracted.effective_date.value if extracted.effective_date else "Unknown"
         expiration_date = extracted.expiration_date.value if extracted.expiration_date else "Ongoing"
         contract_type = extracted.contract_type.value if extracted.contract_type else "Unknown"
-        obligations_count = len(extracted.key_obligations) if extracted.key_obligations else 0
+        
+        # Handle key_obligations - now it's a FieldValue with value property containing the list
+        obligations_count = 0
+        if extracted.key_obligations:
+            obligations_list = extracted.key_obligations.value if hasattr(extracted.key_obligations, 'value') else extracted.key_obligations
+            obligations_count = len(obligations_list) if obligations_list else 0
         
         return (
             f"Parties: {parties}\n"

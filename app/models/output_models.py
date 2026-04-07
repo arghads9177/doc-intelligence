@@ -63,7 +63,7 @@ class ExtractedFinancial(BaseModel):
     currency: Optional[FieldValue] = Field(
         default=None, description="Currency code (e.g., USD, EUR)"
     )
-    items: Optional[list[dict]] = Field(
+    items: Optional[FieldValue] = Field(
         default=None, description="Line items with amounts and descriptions"
     )
     invoice_number: Optional[FieldValue] = Field(
@@ -83,7 +83,7 @@ class ExtractedContract(BaseModel):
     expiration_date: Optional[FieldValue] = Field(
         default=None, description="Expiration or end date"
     )
-    key_obligations: Optional[list[dict]] = Field(
+    key_obligations: Optional[FieldValue] = Field(
         default=None, description="Key obligations from the contract"
     )
     contract_type: Optional[FieldValue] = Field(

@@ -19,7 +19,7 @@ Your task is to carefully analyze the document and extract the following informa
 
 1. **company** - The name of the company/vendor/seller issuing the document
 2. **date** - The document date (issued date for invoice, transaction date for receipt)
-3. **total_amount** - The total amount in the original currency
+3. **total_amount** - The total amount in the original currency (numeric value without currency symbol)
 4. **currency** - The currency code (e.g., USD, EUR, GBP)
 5. **items** - List of line items with descriptions and amounts (if available)
 6. **invoice_number** - Invoice/receipt/transaction number/ID (if present)
@@ -30,9 +30,10 @@ For each extracted field, provide:
 - Brief notes if there's any ambiguity or uncertainty
 
 IMPORTANT GUIDELINES:
-- Be precise with monetary amounts (preserve exact values)
+- Be precise with monetary amounts (preserve exact values as numeric numbers without $ or commas)
+- For monetary amounts in items, extract as plain numbers (e.g., 6000.00 not $6,000.00)
 - Parse dates in ISO format (YYYY-MM-DD) when possible
-- For items, extract and list each line item separately
+- For items, extract and list each line item separately with amount as numeric value
 - If a field is not found or unclear, set confidence to 0.0 and note "not found" or "unclear"
 - Focus on accuracy over completeness - missing fields are ok
 - Do not hallucinate or guess information

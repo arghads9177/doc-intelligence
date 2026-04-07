@@ -1,0 +1,39 @@
+RECEIPT
+
+Store: Downtown Coffee & Bakery
+Location: 789 Main Street, Boston, MA 02101
+Store #: 0847
+Register: 3
+Receipt #: REC-20240407-123
+
+Date: April 7, 2024
+Time: 09:45 AM
+
+ITEMS PURCHASED:
+1. Caffe Latte (Large) ............................ $5.50
+   Qty: 1 @ $5.50 = $5.50
+
+2. Almond Croissant ............................ $4.75
+   Qty: 1 @ $4.75 = $4.75
+
+3. Bottled Water (500mL) ............................ $2.25
+   Qty: 2 @ $2.25 = $4.50
+
+4. Blueberry Muffin ............................ $3.95
+   Qty: 1 @ $3.95 = $3.95
+
+SUBTOTAL: $18.70
+Tax (8%): $1.58
+TOTAL: $20.28
+
+Payment Method: Credit Card
+Card Type: VISA
+Last 4 Digits: 4242
+Authorization: 654321
+Currency: USD
+
+Thank you for your purchase!
+Have a great day!
+
+Return Policy: All sales are final.
+Exchanges within 7 days with receipt.

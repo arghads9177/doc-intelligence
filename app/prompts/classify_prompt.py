@@ -50,7 +50,9 @@ Please classify the following document:
 Document Text:
 {document_text}
 
-Respond with a JSON object containing only the "doc_type" field with one of: "invoice", "receipt", "contract", or "unknown".
+Respond with a JSON object containing:
+- "doc_type": one of "invoice", "receipt", "contract", or "unknown"
+- "confidence": your confidence score from 0.0 to 1.0
 """
 
 # Create the chat prompt template

@@ -1,0 +1,39 @@
+INVOICE
+
+Company: Acme Corporation Ltd.
+Address: 123 Business Street, Suite 100, New York, NY 10001
+Phone: (555) 123-4567
+Email: billing@acmecorp.com
+Tax ID: 12-3456789
+
+INVOICE DETAILS
+Invoice Number: INV-2024-001234
+Invoice Date: March 15, 2024
+Due Date: April 15, 2024
+PO Number: PO-2024-5678
+
+BILL TO:
+XYZ Services Inc.
+Attn: Accounting Department
+456 Client Avenue, Suite 200
+San Francisco, CA 94105
+
+DESCRIPTION OF SERVICES/ITEMS:
+1. Professional Consulting Services - 40 hours @ $150/hour = $6,000.00
+2. Software License (Annual) - 1 license @ $2,500.00 = $2,500.00
+3. Technical Support - 10 hours @ $100/hour = $1,000.00
+
+SUBTOTAL: $9,500.00
+Tax Rate: 10%
+Sales Tax (10%): $950.00
+Shipping: $0.00
+
+TOTAL AMOUNT DUE: $10,450.00
+
+Payment Method: Wire Transfer
+Bank: First Finance Bank
+Account: 9876543210
+Routing Number: 021000021
+
+Terms: Net 30 days
+Notes: Thank you for your business. Please reference invoice number in payment.

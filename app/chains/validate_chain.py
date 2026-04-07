@@ -105,8 +105,8 @@ def create_financial_validation_chain():
     # Build chain
     rule_validation = RunnableLambda(validate_step)
     prompt_chain = prompt.partial(
-        extracted_data=lambda x: _format_extraction(x["extracted"]),
-        rule_issues=format_rule_issues,
+        extracted_data=RunnableLambda(lambda x: _format_extraction(x["extracted"])),
+        rule_issues=RunnableLambda(format_rule_issues),
     )
     
     chain = (
@@ -156,8 +156,8 @@ def create_contract_validation_chain():
     # Build chain
     rule_validation = RunnableLambda(validate_step)
     prompt_chain = prompt.partial(
-        extracted_data=lambda x: _format_extraction(x["extracted"]),
-        rule_issues=format_rule_issues,
+        extracted_data=RunnableLambda(lambda x: _format_extraction(x["extracted"])),
+        rule_issues=RunnableLambda(format_rule_issues),
     )
     
     chain = (
@@ -429,6 +429,12 @@ def _format_extraction(extracted: Union[ExtractedFinancial, ExtractedContract]) 
         Formatted string representation
     """
     if isinstance(extracted, ExtractedFinancial):
+        # Handle items - now it's a FieldValue with value property containing the list
+        items_count = 0
+        if extracted.items:
+            items_list = extracted.items.value if hasattr(extracted.items, 'value') else extracted.items
+            items_count = len(items_list) if items_list else 0
+        
         return (
             f"Company: {extracted.company.value if extracted.company else 'N/A'} "
             f"(confidence: {extracted.company.confidence if extracted.company else 'N/A'})\n"
@@ -437,7 +443,7 @@ def _format_extraction(extracted: Union[ExtractedFinancial, ExtractedContract]) 
             f"Total Amount: {extracted.total_amount.value if extracted.total_amount else 'N/A'} "
             f"{extracted.currency.value if extracted.currency else ''} "
             f"(confidence: {extracted.total_amount.confidence if extracted.total_amount else 'N/A'})\n"
-            f"Items: {len(extracted.items) if extracted.items else 0} line items\n"
+            f"Items: {items_count} line items\n"
             f"Invoice Number: {extracted.invoice_number.value if extracted.invoice_number else 'N/A'} "
             f"(confidence: {extracted.invoice_number.confidence if extracted.invoice_number else 'N/A'})"
         )
@@ -445,6 +451,13 @@ def _format_extraction(extracted: Union[ExtractedFinancial, ExtractedContract]) 
         parties_str = ", ".join(
             [p.value for p in (extracted.parties or [])]
         ) if extracted.parties else "N/A"
+        
+        # Handle key_obligations - now it's a FieldValue with value property containing the list
+        obligations_count = 0
+        if extracted.key_obligations:
+            obligations_list = extracted.key_obligations.value if hasattr(extracted.key_obligations, 'value') else extracted.key_obligations
+            obligations_count = len(obligations_list) if obligations_list else 0
+        
         return (
             f"Parties: {parties_str}\n"
             f"Effective Date: {extracted.effective_date.value if extracted.effective_date else 'N/A'} "
@@ -453,5 +466,5 @@ def _format_extraction(extracted: Union[ExtractedFinancial, ExtractedContract]) 
             f"(confidence: {extracted.expiration_date.confidence if extracted.expiration_date else 'N/A'})\n"
             f"Contract Type: {extracted.contract_type.value if extracted.contract_type else 'N/A'} "
             f"(confidence: {extracted.contract_type.confidence if extracted.contract_type else 'N/A'})\n"
-            f"Key Obligations: {len(extracted.key_obligations) if extracted.key_obligations else 0} items"
+            f"Key Obligations: {obligations_count} items"
         )
