@@ -4,7 +4,7 @@ FastAPI route for document analysis endpoint.
 Provides POST /api/analyze endpoint for full document processing pipeline.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from app.models.request_models import AnalyzeRequest
 from app.models.output_models import AnalyzeResponse
 from app.services.response_builder import build_analysis_response
@@ -22,14 +22,6 @@ router = APIRouter(prefix="/api", tags=["Analysis"])
 )
 async def analyze_documents(
     request: AnalyzeRequest,
-    include_summary: bool = Query(
-        True,
-        description="Include AI-generated summaries in response"
-    ),
-    include_validation: bool = Query(
-        True,
-        description="Include validation reports in response"
-    ),
 ) -> AnalyzeResponse:
     """
     Analyze one or more documents through the complete pipeline.
@@ -105,9 +97,7 @@ async def analyze_documents(
     ```
     
     Args:
-        request: AnalyzeRequest with documents to process
-        include_summary: Whether to generate summaries
-        include_validation: Whether to include validation reports
+        request: AnalyzeRequest with documents to process, including include_summary and include_validation flags
         
     Returns:
         AnalyzeResponse with processing results
@@ -132,8 +122,8 @@ async def analyze_documents(
         # Process documents
         response = await build_analysis_response(
             request.documents,
-            include_summary=include_summary,
-            include_validation=include_validation,
+            include_summary=request.include_summary,
+            include_validation=request.include_validation,
         )
         
         return response

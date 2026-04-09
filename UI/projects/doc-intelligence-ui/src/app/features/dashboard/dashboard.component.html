@@ -1,0 +1,185 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-12">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">
+        📊 Dashboard
+      </h1>
+      <p class="text-gray-600">Overview of document processing statistics and recent activity</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div *ngFor="let stat of stats" 
+           class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <p class="text-gray-600 text-sm font-medium mb-1">{{ stat.label }}</p>
+            <div class="flex items-end gap-2">
+              <span class="text-3xl font-bold" [ngClass]="stat.color">{{ stat.value }}</span>
+              <span *ngIf="stat.unit" class="text-gray-500 text-sm mb-1">{{ stat.unit }}</span>
+            </div>
+          </div>
+          <div class="text-4xl">{{ stat.icon }}</div>
+        </div>
+        <div [ngClass]="stat.bgColor" class="h-1 rounded-full w-full"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Document Type Distribution -->
+      <div class="lg:col-span-1 bg-white rounded-xl shadow-md border border-gray-100 p-6">
+        <h2 class="text-xl font-bold mb-6 text-gray-800">
+          📁 Document Types
+        </h2>
+        <div class="space-y-4">
+          <div *ngFor="let type of documentTypeStats" class="flex items-end gap-3">
+            <div class="flex-1">
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-medium text-gray-700 capitalize">{{ type.type }}</span>
+                <span class="text-sm font-bold text-gray-600">{{ type.count }}</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div [ngClass]="type.color" 
+                     class="h-2 rounded-full transition-all duration-500"
+                     [style.width.%]="type.percentage">
+                </div>
+              </div>
+              <span class="text-xs text-gray-500">{{ type.percentage }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pie Chart Alternative -->
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <div class="flex justify-center items-center gap-4 flex-wrap">
+            <div *ngFor="let type of documentTypeStats; let i = index" 
+                 class="text-center">
+              <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl"
+                   [ngClass]="type.color + ' bg-opacity-20 ' + type.color.replace('500', '100')">
+                {{ getTypeIcon(type.type) }}
+              </div>
+              <div class="text-xs mt-2">
+                <p class="font-semibold text-gray-700">{{ type.count }}</p>
+                <p class="text-gray-500 capitalize">{{ type.type }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Processing Timeline Chart -->
+      <div class="lg:col-span-2 bg-white rounded-xl shadow-md border border-gray-100 p-6">
+        <h2 class="text-xl font-bold mb-6 text-gray-800">
+          📈 Processing Activity (Last 7 Days)
+        </h2>
+        
+        <div class="space-y-1">
+          <div class="flex items-end justify-between h-40 gap-2 px-2">
+            <div *ngFor="let stat of processingStats" 
+                 class="flex-1 flex flex-col items-center gap-2">
+              <div class="w-full flex items-end justify-center min-h-32">
+                <div class="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all duration-500 hover:shadow-lg"
+                     [style.height.%]="getBarHeight(stat.count)"
+                     [title]="stat.count + ' documents'">
+                </div>
+              </div>
+              <span class="text-xs text-gray-600 font-medium">{{ stat.timestamp }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-gray-200">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-blue-50 rounded-lg p-4">
+              <p class="text-gray-600 text-sm mb-1">Peak Day</p>
+              <p class="text-2xl font-bold text-blue-600">
+                {{ peakDayCount }}
+              </p>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4">
+              <p class="text-gray-600 text-sm mb-1">Total This Week</p>
+              <p class="text-2xl font-bold text-green-600">
+                {{ totalWeekCount }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Documents -->
+    <div class="mt-8 bg-white rounded-xl shadow-md border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-xl font-bold text-gray-800">
+          📜 Recent Documents
+        </h2>
+        <a routerLink="/history" 
+           class="text-blue-600 hover:text-blue-700 font-medium text-sm">
+          View All →
+        </a>
+      </div>
+
+      <div *ngIf="recentDocuments.length > 0">
+        <div class="space-y-3">
+          <div *ngFor="let doc of recentDocuments" 
+               class="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors group border border-gray-100">
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+              <div class="text-3xl flex-shrink-0">{{ getTypeIcon(doc.type) }}</div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-800 truncate">{{ doc.name }}</p>
+                <p class="text-sm text-gray-500">
+                  Processed {{ formatDate(doc.date) }} • {{ formatTime(doc.processingTime) }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 flex-shrink-0">
+              <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold"
+                    [ngClass]="doc.status === 'completed' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-amber-100 text-amber-700'">
+                {{ doc.status === 'completed' ? '✓ Completed' : '⏳ Processing' }}
+              </span>
+              <a routerLink="/results/{{ doc.id }}" 
+                 class="text-blue-600 hover:text-blue-700 font-medium text-sm group-hover:underline">
+                Details →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="recentDocuments.length === 0" 
+           class="text-center py-12 text-gray-500">
+        <p class="text-lg mb-2">No documents processed yet</p>
+        <a routerLink="/upload" 
+           class="text-blue-600 hover:text-blue-700 font-medium">
+          Upload your first document
+        </a>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <a routerLink="/upload"
+         class="bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-white rounded-xl p-6 flex items-center gap-4 group">
+        <span class="text-3xl">📤</span>
+        <div>
+          <p class="font-bold text-lg">Upload Documents</p>
+          <p class="text-blue-100 text-sm">Start processing new documents</p>
+        </div>
+        <span class="ml-auto text-2xl group-hover:translate-x-1 transition-transform">→</span>
+      </a>
+
+      <a routerLink="/history"
+         class="bg-gradient-to-r from-purple-600 to-purple-700 hover:shadow-lg transform hover:scale-105 transition-all duration-300 text-white rounded-xl p-6 flex items-center gap-4 group">
+        <span class="text-3xl">📋</span>
+        <div>
+          <p class="font-bold text-lg">View History</p>
+          <p class="text-purple-100 text-sm">Browse all processed documents</p>
+        </div>
+        <span class="ml-auto text-2xl group-hover:translate-x-1 transition-transform">→</span>
+      </a>
+    </div>
+  </div>
+</div>

@@ -6,24 +6,24 @@ import { ValidationReport } from './validation';
  */
 export interface ProcessedDocument {
   filename: string;
-  docType: string;
-  docTypeConfidence: number;
-  extractedFields?: ExtractedFinancial | ExtractedContract;
-  validationReport?: ValidationReport;
+  doc_type: string;
+  doc_type_confidence: number;
+  extracted_fields?: ExtractedFinancial | ExtractedContract;
+  validation_report?: ValidationReport;
   summary?: string;
-  rawTextPreview?: string;
+  raw_text_preview?: string;
 }
 
 /**
  * Complete API response from /api/analyze
  */
 export interface AnalyzeResponse {
-  status: 'success' | 'error';
+  status: 'success' | 'error' | 'partial_success';
   message: string;
-  processedDocuments: ProcessedDocument[];
-  totalProcessed: number;
-  totalErrors: number;
-  processingTimeSecs: number;
+  processed_documents: ProcessedDocument[];
+  total_processed: number;
+  total_errors: number;
+  processing_time_seconds: number;
 }
 
 /**

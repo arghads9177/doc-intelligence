@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DocumentService } from '../../shared/services/document.service';
@@ -147,7 +147,7 @@ import { Document } from '../../shared/models';
     `
   ]
 })
-export class UploadComponent implements OnInit {
+export class UploadComponent implements OnInit, OnDestroy {
   @ViewChild('fileInputRef') fileInputRef!: ElementRef;
 
   uploadedDocuments: Document[] = [];
@@ -156,6 +156,10 @@ export class UploadComponent implements OnInit {
   selectedFiles: FileList | null = null;
   includeValidation = true;
   includeSummary = true;
+  
+  // Store File objects keyed by document ID for later submission
+  private fileMap: Map<string, File> = new Map();
+  private documentsSubscription: any;
 
   private readonly MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   private readonly ALLOWED_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/tiff'];
@@ -169,6 +173,20 @@ export class UploadComponent implements OnInit {
   ngOnInit(): void {
     // Clear documents on component load
     this.documentService.clearDocuments();
+    
+    // Subscribe to document updates (single subscription)
+    if (this.documentsSubscription) {
+      this.documentsSubscription.unsubscribe();
+    }
+    this.documentsSubscription = this.documentService.documents$.subscribe((docs) => {
+      this.uploadedDocuments = docs;
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.documentsSubscription) {
+      this.documentsSubscription.unsubscribe();
+    }
   }
 
   onDragOver(event: DragEvent): void {
@@ -227,14 +245,10 @@ export class UploadComponent implements OnInit {
     }
 
     if (validFiles.length > 0) {
-      // Add valid files to document service
+      // Add valid files to document service and store File objects
       validFiles.forEach((file) => {
-        this.documentService.addDocument(file.name, file.size, file.type);
-      });
-
-      // Update local reference
-      this.documentService.documents$.subscribe((docs) => {
-        this.uploadedDocuments = docs;
+        const doc = this.documentService.addDocument(file.name, file.size, file.type);
+        this.fileMap.set(doc.id, file);
       });
 
       this.notificationService.success(`${validFiles.length} file(s) added`);
@@ -246,10 +260,12 @@ export class UploadComponent implements OnInit {
   }
 
   removeDocument(documentId: string): void {
+    this.fileMap.delete(documentId);
     this.documentService.removeDocument(documentId);
   }
 
   clearAll(): void {
+    this.fileMap.clear();
     this.documentService.clearDocuments();
     this.uploadedDocuments = [];
     if (this.fileInputRef) {
@@ -258,6 +274,7 @@ export class UploadComponent implements OnInit {
   }
 
   submitDocuments(): void {
+    console.log('submitDocuments() called');
     if (this.uploadedDocuments.length === 0) {
       this.notificationService.warning('Please select documents to analyze');
       return;
@@ -266,18 +283,26 @@ export class UploadComponent implements OnInit {
     this.isProcessing = true;
     this.documentService.setProcessingStatus('ingesting' as any);
 
-    // Convert documents to API request format
-    this.apiService.filesToDocumentInputs(Array.from((this.fileInputRef.nativeElement as HTMLInputElement).files || [])).then((documentInputs) => {
-      const analyzeRequest = {
-        documents: documentInputs,
-        include_validation: this.includeValidation,
-        include_summary: this.includeSummary
-      };
+    // Get the stored File objects in the correct order
+    const filesToProcess = this.uploadedDocuments
+      .map(doc => this.fileMap.get(doc.id))
+      .filter((file): file is File => file !== undefined);
 
-      this.apiService.analyzeDocuments(analyzeRequest.documents, this.includeSummary, this.includeValidation).subscribe({
+    console.log('Files to process:', filesToProcess.length);
+
+    if (filesToProcess.length === 0) {
+      this.isProcessing = false;
+      this.notificationService.error('No files available to process');
+      return;
+    }
+
+    // Convert documents to API request format (with base64 content)
+    this.apiService.filesToDocumentInputs(filesToProcess).then((documentInputs) => {
+      // Call analyze with the correct request format
+      this.apiService.analyzeDocuments(documentInputs, this.includeSummary, this.includeValidation).subscribe({
         next: (response) => {
           this.isProcessing = false;
-          this.notificationService.success(`Successfully analyzed ${response.processedDocuments.length} document(s)`);
+          this.notificationService.success(`Successfully analyzed ${response.processed_documents.length} document(s)`);
 
           // Save to history
           const batch = {
@@ -286,8 +311,8 @@ export class UploadComponent implements OnInit {
             completedAt: new Date(),
             documents: this.uploadedDocuments,
             totalDocuments: this.uploadedDocuments.length,
-            processedDocuments: response.totalProcessed,
-            failedDocuments: response.totalErrors
+            processedDocuments: response.total_processed,
+            failedDocuments: response.total_errors
           };
           this.documentService.addToHistory(batch);
 
@@ -301,6 +326,9 @@ export class UploadComponent implements OnInit {
           this.notificationService.error(`Failed to analyze documents: ${error.message}`);
         }
       });
+    }).catch((error) => {
+      this.isProcessing = false;
+      this.notificationService.error(`Failed to process files: ${error.message}`);
     });
   }
 }

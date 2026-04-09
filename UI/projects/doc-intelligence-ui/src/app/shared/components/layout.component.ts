@@ -36,12 +36,30 @@ import { NotificationService, Toast } from '../services/notification.service';
               <span class="absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full group-hover:w-full transition-all duration-300"></span>
             </a>
             <a
+              routerLink="/dashboard"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 relative group"
+            >
+              📊 Dashboard
+              <span class="absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full group-hover:w-full transition-all duration-300"></span>
+            </a>
+            <a
               routerLink="/history"
               routerLinkActive="active"
               [routerLinkActiveOptions]="{ exact: true }"
               class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 relative group"
             >
               📋 History
+              <span class="absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full group-hover:w-full transition-all duration-300"></span>
+            </a>
+            <a
+              routerLink="/comparison"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 relative group"
+            >
+              🔍 Compare
               <span class="absolute bottom-0 left-0 w-0 h-1 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full group-hover:w-full transition-all duration-300"></span>
             </a>
             <a

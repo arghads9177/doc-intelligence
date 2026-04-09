@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from app.routes.analyze import router as analyze_router
 
 # Configure logging
@@ -95,7 +96,16 @@ def create_app() -> FastAPI:
             },
         }
 
-    # Error handlers
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request, exc):
+        """Handle Pydantic validation errors."""
+        logger.error(f"Validation Error: {exc.errors()}")
+        logger.error(f"Request body: {exc.body if hasattr(exc, 'body') else 'N/A'}")
+        return JSONResponse(
+            status_code=422,
+            content={"status": "error", "message": "Validation failed", "errors": exc.errors()},
+        )
+
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):
         """Handle HTTP exceptions."""

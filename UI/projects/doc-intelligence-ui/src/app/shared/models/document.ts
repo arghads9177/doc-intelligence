@@ -30,8 +30,8 @@ export interface AnalyzeRequest {
  */
 export interface DocumentInput {
   filename: string;
-  contentType: string;
-  fileBytes: string; // Base64 encoded
+  content_type: string;
+  file_bytes: string; // Base64 encoded
   metadata?: Record<string, any>;
 }
 

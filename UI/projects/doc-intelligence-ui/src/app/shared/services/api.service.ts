@@ -29,11 +29,14 @@ export class ApiService {
     includeSummary: boolean = true,
     includeValidation: boolean = true
   ): Observable<AnalyzeResponse> {
-    const request: AnalyzeRequest = {
+    // Construct request body with snake_case keys to match backend expectations
+    const request = {
       documents,
-      includeSummary,
-      includeValidation
+      include_summary: includeSummary,
+      include_validation: includeValidation
     };
+
+    console.log('Sending analyze request:', JSON.stringify(request, null, 2));
 
     return this.http
       .post<AnalyzeResponse>(`${this.apiUrl}/api/analyze`, request)
@@ -89,8 +92,8 @@ export class ApiService {
       const base64 = await this.fileToBase64(file);
       documentInputs.push({
         filename: file.name,
-        contentType: file.type || 'application/octet-stream',
-        fileBytes: base64
+        content_type: file.type || 'application/octet-stream',
+        file_bytes: base64
       });
     }
 

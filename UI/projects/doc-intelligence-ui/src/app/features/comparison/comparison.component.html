@@ -1,0 +1,223 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 p-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <a routerLink="/history" class="text-blue-600 hover:text-blue-700 font-medium mb-4 inline-flex items-center gap-2">
+        ← Back to History
+      </a>
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent mb-2">
+        🔍 Document Comparison
+      </h1>
+      <p class="text-gray-600">Compare extracted data and validation results from two documents</p>
+    </div>
+
+    <!-- Document Selection -->
+    <div *ngIf="!comparisonData || !document1 || !document2" 
+         class="bg-white rounded-xl shadow-md border border-gray-100 p-8 mb-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-6">Select Documents to Compare</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Document 1 Selection -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+          <label class="block text-sm font-semibold text-gray-700 mb-4">📄 First Document</label>
+          <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                  [(ngModel)]="selectedDoc1Id"
+                  (change)="selectDocuments(selectedDoc1Id!, selectedDoc2Id!)">
+            <option value="">-- Select Document --</option>
+            <option *ngFor="let doc of availableDocuments" [value]="doc.id">
+              {{ getDocumentIcon(doc.type) }} {{ doc.name }}
+            </option>
+          </select>
+          <p *ngIf="selectedDoc1Id" class="text-sm text-green-600 mt-3">✓ Selected</p>
+        </div>
+
+        <!-- Document 2 Selection -->
+        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-green-400 transition-colors">
+          <label class="block text-sm font-semibold text-gray-700 mb-4">📄 Second Document</label>
+          <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 bg-white"
+                  [(ngModel)]="selectedDoc2Id"
+                  (change)="selectDocuments(selectedDoc1Id!, selectedDoc2Id!)">
+            <option value="">-- Select Document --</option>
+            <option *ngFor="let doc of availableDocuments" [value]="doc.id">
+              {{ getDocumentIcon(doc.type) }} {{ doc.name }}
+            </option>
+          </select>
+          <p *ngIf="selectedDoc2Id" class="text-sm text-green-600 mt-3">✓ Selected</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparison Results -->
+    <div *ngIf="comparisonData && document1 && document2">
+      <!-- Document Headers -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- Document 1 -->
+        <div class="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl shadow-md border border-blue-200 p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <div class="text-3xl mb-2">{{ getDocumentIcon(document1.type) }}</div>
+              <h3 class="text-lg font-bold text-gray-800">{{ document1.name }}</h3>
+              <p class="text-sm text-gray-600">{{ document1.type | titlecase }} • {{ formatDate(document1.date) }}</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Document 1</span>
+          </div>
+        </div>
+
+        <!-- Document 2 -->
+        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-md border border-green-200 p-6">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <div class="text-3xl mb-2">{{ getDocumentIcon(document2.type) }}</div>
+              <h3 class="text-lg font-bold text-gray-800">{{ document2.name }}</h3>
+              <p class="text-sm text-gray-600">{{ document2.type | titlecase }} • {{ formatDate(document2.date) }}</p>
+            </div>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Document 2</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Similarity Score -->
+      <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-gray-800">Overall Similarity</h3>
+            <p class="text-gray-600">Based on field matching and confidence comparison</p>
+          </div>
+          <div class="text-right">
+            <div class="text-5xl font-bold">
+              <span [ngClass]="similarityPercentage >= 75 ? 'text-green-600' : 'text-orange-600'">
+                {{ similarityPercentage }}%
+              </span>
+            </div>
+            <p class="text-sm text-gray-600 mt-1">
+              {{ similarityPercentage >= 75 ? '✓ Highly Similar' : '⚠ Moderate Similarity' }}
+            </p>
+          </div>
+        </div>
+        
+        <!-- Similarity Bar -->
+        <div class="mt-4">
+          <div class="w-full bg-gray-200 rounded-full h-3">
+            <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500"
+                 [style.width.%]="similarityPercentage">
+            </div>
+          </div>
+          <div class="flex justify-between text-xs text-gray-600 mt-2">
+            <span>0% Match</span>
+            <span>100% Match</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- View Options -->
+      <div class="bg-white rounded-xl shadow-md border border-gray-100 p-6 mb-8">
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div class="flex gap-2">
+            <button (click)="setViewMode('side-by-side')"
+                    [class.bg-blue-600]="viewMode === 'side-by-side'"
+                    [class.text-white]="viewMode === 'side-by-side'"
+                    [class.bg-gray-100]="viewMode !== 'side-by-side'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+              ↔️ Side by Side
+            </button>
+            <button (click)="setViewMode('diff')"
+                    [class.bg-blue-600]="viewMode === 'diff'"
+                    [class.text-white]="viewMode === 'diff'"
+                    [class.bg-gray-100]="viewMode !== 'diff'"
+                    class="px-4 py-2 rounded-lg font-medium transition-colors">
+              🔀 Differences
+            </button>
+          </div>
+
+          <div class="flex gap-2">
+            <label class="flex items-center gap-2 cursor-pointer text-gray-700">
+              <input type="checkbox" [(ngModel)]="showDifferencesOnly"
+                     class="w-4 h-4 rounded accent-blue-600">
+              <span class="text-sm font-medium">Show Differences Only</span>
+            </label>
+          </div>
+
+          <button (click)="downloadComparison()"
+                  class="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all">
+            ⬇️ Export CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- Comparison Table -->
+      <div class="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gradient-to-r from-slate-100 to-slate-200 border-b-2 border-gray-300">
+              <tr>
+                <th class="px-6 py-4 text-left text-sm font-bold text-gray-800 w-1/4">Field Name</th>
+                <th class="px-6 py-4 text-left text-sm font-bold text-blue-800">Document 1 Value</th>
+                <th class="px-6 py-4 text-left text-sm font-bold text-green-800">Document 2 Value</th>
+                <th class="px-6 py-4 text-center text-sm font-bold text-gray-800 w-20">Match</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr *ngFor="let field of getDisplayedFields()"
+                  class="hover:bg-gray-50 transition-colors"
+                  [ngClass]="field.isDifferent ? 'bg-red-50' : ''">
+                <td class="px-6 py-4 font-semibold text-gray-800">
+                  {{ field.fieldName }}
+                  <span *ngIf="field.isDifferent" class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                    Different
+                  </span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex flex-col gap-1">
+                    <p class="text-gray-800">{{ field.value1 }}</p>
+                    <span class="inline-block text-xs font-semibold px-2 py-1 rounded w-fit"
+                          [ngClass]="getConfidenceBgColor(field.confidence1) + ' ' + getConfidenceColor(field.confidence1)">
+                      {{ (field.confidence1 * 100).toFixed(0) }}% Confidence
+                    </span>
+                  </div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex flex-col gap-1">
+                    <p class="text-gray-800">{{ field.value2 }}</p>
+                    <span class="inline-block text-xs font-semibold px-2 py-1 rounded w-fit"
+                          [ngClass]="getConfidenceBgColor(field.confidence2) + ' ' + getConfidenceColor(field.confidence2)">
+                      {{ (field.confidence2 * 100).toFixed(0) }}% Confidence
+                    </span>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span *ngIf="!field.isDifferent" class="text-2xl">✓</span>
+                  <span *ngIf="field.isDifferent" class="text-2xl">✕</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="getDisplayedFields().length === 0" class="p-8 text-center text-gray-500">
+          <p class="text-lg">No differences found</p>
+          <button (click)="toggleDifferencesOnly()"
+                  class="text-blue-600 hover:text-blue-700 font-medium mt-2">
+            Show all fields
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <div class="bg-blue-50 rounded-xl border border-blue-200 p-6 text-center">
+          <p class="text-gray-600 text-sm mb-2">Total Fields Compared</p>
+          <p class="text-3xl font-bold text-blue-600">{{ comparisonFields.length }}</p>
+        </div>
+        <div class="bg-green-50 rounded-xl border border-green-200 p-6 text-center">
+          <p class="text-gray-600 text-sm mb-2">Matching Fields</p>
+          <p class="text-3xl font-bold text-green-600">{{ getMatchingFieldsCount() }}</p>
+        </div>
+        <div class="bg-orange-50 rounded-xl border border-orange-200 p-6 text-center">
+          <p class="text-gray-600 text-sm mb-2">Differences Found</p>
+          <p class="text-3xl font-bold text-orange-600">{{ getDifferencesCount() }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

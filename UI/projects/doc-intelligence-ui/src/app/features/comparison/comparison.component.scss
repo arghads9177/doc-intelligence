@@ -1,0 +1,40 @@
+/* Document Comparison Component Styles */
+
+:host {
+  display: block;
+}
+
+/* Comparison table animations */
+table {
+  tbody tr {
+    &.difference {
+      animation: highlightRow 0.5s ease-in-out;
+    }
+  }
+}
+
+@keyframes highlightRow {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+  100% {
+    background-color: rgba(239, 68, 68, 0.05);
+  }
+}
+
+/* Similarity bar animation */
+.similarity-bar {
+  animation: slideIn 0.8s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}

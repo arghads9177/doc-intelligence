@@ -47,6 +47,22 @@ export const routes: Routes = [
     data: { title: 'Settings' }
   },
   {
+    path: 'dashboard',
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then(
+        (m) => m.DashboardComponent
+      ),
+    data: { title: 'Dashboard' }
+  },
+  {
+    path: 'comparison',
+    loadComponent: () =>
+      import('./features/comparison/comparison.component').then(
+        (m) => m.ComparisonComponent
+      ),
+    data: { title: 'Document Comparison' }
+  },
+  {
     path: '**',
     redirectTo: '/upload'
   }
