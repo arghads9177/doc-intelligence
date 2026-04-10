@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { DocumentService } from '../../shared/services/document.service';
 import { ApiService } from '../../shared/services/api.service';
 import { NotificationService } from '../../shared/services/notification.service';
@@ -167,7 +168,8 @@ export class UploadComponent implements OnInit, OnDestroy {
   constructor(
     private documentService: DocumentService,
     private apiService: ApiService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -304,9 +306,13 @@ export class UploadComponent implements OnInit, OnDestroy {
           this.isProcessing = false;
           this.notificationService.success(`Successfully analyzed ${response.processed_documents.length} document(s)`);
 
+          // Store results in service and generate result ID
+          const resultId = this.documentService.generateBatchId();
+          this.documentService.setAnalysisResults(response, resultId);
+
           // Save to history
           const batch = {
-            id: this.documentService.generateBatchId(),
+            id: resultId,
             createdAt: new Date(),
             completedAt: new Date(),
             documents: this.uploadedDocuments,
@@ -316,10 +322,10 @@ export class UploadComponent implements OnInit, OnDestroy {
           };
           this.documentService.addToHistory(batch);
 
-          // Clear and redirect would happen here
+          // Navigate to results page
           setTimeout(() => {
-            this.clearAll();
-          }, 1000);
+            this.router.navigate(['/results', resultId]);
+          }, 500);
         },
         error: (error) => {
           this.isProcessing = false;

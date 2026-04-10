@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Document, DocumentBatch, ProcessingStatus, DocumentType } from '../models';
+import { AnalyzeResponse } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -11,12 +12,16 @@ export class DocumentService {
   private documentsSubject = new BehaviorSubject<Document[]>([]);
   private processingStatusSubject = new BehaviorSubject<ProcessingStatus>(ProcessingStatus.PENDING);
   private documentHistorySubject = new BehaviorSubject<DocumentBatch[]>([]);
+  private analysisResultsSubject = new BehaviorSubject<AnalyzeResponse | null>(null);
+  private latestResultIdSubject = new BehaviorSubject<string | null>(null);
 
   // Public observables
   currentDocument$ = this.currentDocumentSubject.asObservable();
   documents$ = this.documentsSubject.asObservable();
   processingStatus$ = this.processingStatusSubject.asObservable();
   documentHistory$ = this.documentHistorySubject.asObservable();
+  analysisResults$ = this.analysisResultsSubject.asObservable();
+  latestResultId$ = this.latestResultIdSubject.asObservable();
 
   // Local storage key
   private readonly HISTORY_STORAGE_KEY = 'doc_intelligence_history';
@@ -129,6 +134,28 @@ export class DocumentService {
   clearHistory(): void {
     this.documentHistorySubject.next([]);
     localStorage.removeItem(this.HISTORY_STORAGE_KEY);
+  }
+
+  /**
+   * Set analysis results from API response
+   */
+  setAnalysisResults(results: AnalyzeResponse, resultId: string): void {
+    this.analysisResultsSubject.next(results);
+    this.latestResultIdSubject.next(resultId);
+  }
+
+  /**
+   * Get current analysis results
+   */
+  getAnalysisResults(): AnalyzeResponse | null {
+    return this.analysisResultsSubject.value;
+  }
+
+  /**
+   * Get latest result ID
+   */
+  getLatestResultId(): string | null {
+    return this.latestResultIdSubject.value;
   }
 
   /**

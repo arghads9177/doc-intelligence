@@ -1,6 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { DocumentService } from '../../shared/services/document.service';
+import { DocumentBatch } from '../../shared/models';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-history',
@@ -17,17 +21,27 @@ import { RouterLink } from '@angular/router';
           <p class="text-gray-600">View and manage your document processing history with detailed insights.</p>
         </div>
 
+        <!-- Empty State -->
+        <div *ngIf="history.length === 0" class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <p class="text-2xl mb-2">📋</p>
+          <p class="text-lg font-semibold text-gray-900 mb-2">No processing history yet</p>
+          <p class="text-gray-600 mb-6">Start by uploading and analyzing documents to see your history here.</p>
+          <a routerLink="/upload" class="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Upload Documents →
+          </a>
+        </div>
+
         <!-- Table Container -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div *ngIf="history.length > 0" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full">
               <!-- Table Header -->
               <thead>
                 <tr class="bg-gradient-to-r from-gray-50 to-gray-50 border-b border-gray-200">
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Document</th>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Type</th>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Confidence</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Document(s)</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Processed</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Errors</th>
                   <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
                   <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -35,126 +49,53 @@ import { RouterLink } from '@angular/router';
 
               <!-- Table Body -->
               <tbody class="divide-y divide-gray-200">
-                <!-- Row 1 -->
-                <tr class="hover:bg-blue-50 transition-colors duration-150 group">
+                <tr *ngFor="let batch of history; let i = index" 
+                  class="hover:bg-blue-50 transition-colors duration-150 group"
+                  [ngClass]="{ 'bg-green-50 hover:bg-green-100': batch.failedDocuments === 0 }">
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="flex items-center">
-                      <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
-                        <span class="text-red-600 font-bold">📄</span>
+                      <div class="w-10 h-10 rounded-lg" 
+                        [ngClass]="batch.failedDocuments === 0 ? 'bg-green-100' : 'bg-red-100'"
+                        [innerHTML]="'📄'">
                       </div>
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">Invoice_2024_01.pdf</p>
-                        <p class="text-xs text-gray-500">1.2 MB</p>
+                      <div class="ml-3">
+                        <p class="text-sm font-semibold text-gray-900">{{ batch.documents.length }} document(s)</p>
+                        <p class="text-xs text-gray-500">{{ formatBatchId(batch.id) }}</p>
                       </div>
                     </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-3 py-1 inline-flex items-center text-xs font-semibold rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                      📋 Invoice
+                      {{ batch.totalDocuments }}
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-3 py-1 inline-flex items-center text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-300">
-                      ✓ Complete
+                    <span class="px-3 py-1 inline-flex items-center text-xs font-bold rounded-full" 
+                      [ngClass]="batch.processedDocuments === batch.totalDocuments ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-amber-100 text-amber-800 border border-amber-300'">
+                      {{ batch.processedDocuments }}/{{ batch.totalDocuments }}
                     </span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                      <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" style="width: 94%;"></div>
-                      </div>
-                      <span class="text-sm font-semibold text-green-600">94%</span>
-                    </div>
+                    <span *ngIf="batch.failedDocuments > 0" class="px-3 py-1 inline-flex items-center text-xs font-bold rounded-full bg-red-100 text-red-800 border border-red-300">
+                      {{ batch.failedDocuments }}
+                    </span>
+                    <span *ngIf="batch.failedDocuments === 0" class="text-sm text-gray-500">—</span>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    <div>2024-01-15</div>
-                    <div class="text-xs text-gray-500">10:30 AM</div>
+                    <div>{{ batch.createdAt | date: 'MMM d, yyyy' }}</div>
+                    <div class="text-xs text-gray-500">{{ batch.createdAt | date: 'h:mm a' }}</div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <a routerLink="/results/123" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 inline-block">
-                      View →
-                    </a>
-                  </td>
-                </tr>
-
-                <!-- Row 2 -->
-                <tr class="hover:bg-amber-50 transition-colors duration-150 group">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
-                        <span class="text-purple-600 font-bold">🔗</span>
-                      </div>
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">Contract_Q4_2024.pdf</p>
-                        <p class="text-xs text-gray-500">2.8 MB</p>
-                      </div>
+                    <div class="flex gap-2">
+                      <a [routerLink]="['/results', batch.id]" 
+                        class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 inline-block">
+                        View →
+                      </a>
+                      <button (click)="deleteHistory(batch.id)"
+                        class="px-3 py-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all">
+                        ✕
+                      </button>
                     </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-3 py-1 inline-flex items-center text-xs font-semibold rounded-full bg-purple-100 text-purple-700 border border-purple-200">
-                      📜 Contract
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-3 py-1 inline-flex items-center text-xs font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
-                      ⟳ Processing
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-gray-500">--</span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    <div>2024-01-14</div>
-                    <div class="text-xs text-gray-500">3:45 PM</div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <a routerLink="/process/456" class="px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all transform hover:scale-105 inline-block">
-                      Monitor →
-                    </a>
-                  </td>
-                </tr>
-
-                <!-- Row 3 -->
-                <tr class="hover:bg-teal-50 transition-colors duration-150 group">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center">
-                      <div class="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
-                        <span class="text-orange-600 font-bold">🧾</span>
-                      </div>
-                      <div>
-                        <p class="text-sm font-semibold text-gray-900">Receipt_Jan.pdf</p>
-                        <p class="text-xs text-gray-500">0.8 MB</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-3 py-1 inline-flex items-center text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200">
-                      🛒 Receipt
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-3 py-1 inline-flex items-center text-xs font-bold rounded-full bg-green-100 text-green-800 border border-green-300">
-                      ✓ Complete
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="flex items-center gap-2">
-                      <div class="w-16 bg-gray-200 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 h-2 rounded-full" style="width: 87%;"></div>
-                      </div>
-                      <span class="text-sm font-semibold text-yellow-600">87%</span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    <div>2024-01-13</div>
-                    <div class="text-xs text-gray-500">2:15 PM</div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <a routerLink="/results/789" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all transform hover:scale-105 inline-block">
-                      View →
-                    </a>
                   </td>
                 </tr>
               </tbody>
@@ -164,20 +105,20 @@ import { RouterLink } from '@angular/router';
           <!-- Table Footer Stats -->
           <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 grid grid-cols-4 gap-4">
             <div class="text-center">
-              <p class="text-2xl font-bold text-blue-600">3</p>
+              <p class="text-2xl font-bold text-blue-600">{{ getTotalDocuments() }}</p>
               <p class="text-xs text-gray-600">Total Documents</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold text-green-600">2</p>
-              <p class="text-xs text-gray-600">Completed</p>
+              <p class="text-2xl font-bold text-green-600">{{ getTotalProcessed() }}</p>
+              <p class="text-xs text-gray-600">Successfully Processed</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold text-amber-600">1</p>
-              <p class="text-xs text-gray-600">Processing</p>
+              <p class="text-2xl font-bold text-red-600">{{ getTotalErrors() }}</p>
+              <p class="text-xs text-gray-600">Errors</p>
             </div>
             <div class="text-center">
-              <p class="text-2xl font-bold text-purple-600">91%</p>
-              <p class="text-xs text-gray-600">Avg Confidence</p>
+              <p class="text-2xl font-bold text-purple-600">{{ history.length }}</p>
+              <p class="text-xs text-gray-600">Total Batches</p>
             </div>
           </div>
         </div>
@@ -197,4 +138,44 @@ import { RouterLink } from '@angular/router';
   `,
   styles: []
 })
-export class HistoryComponent {}
+export class HistoryComponent implements OnInit, OnDestroy {
+  history: DocumentBatch[] = [];
+  private destroy$ = new Subject<void>();
+
+  constructor(private documentService: DocumentService) {}
+
+  ngOnInit(): void {
+    this.documentService.documentHistory$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((batches) => {
+        this.history = batches;
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  getTotalDocuments(): number {
+    return this.history.reduce((sum, batch) => sum + batch.totalDocuments, 0);
+  }
+
+  getTotalProcessed(): number {
+    return this.history.reduce((sum, batch) => sum + batch.processedDocuments, 0);
+  }
+
+  getTotalErrors(): number {
+    return this.history.reduce((sum, batch) => sum + batch.failedDocuments, 0);
+  }
+
+  formatBatchId(id: string): string {
+    return id.substring(0, 8) + '...';
+  }
+
+  deleteHistory(batchId: string): void {
+    if (confirm('Are you sure you want to delete this history item?')) {
+      this.documentService.deleteHistoryItem(batchId);
+    }
+  }
+}
