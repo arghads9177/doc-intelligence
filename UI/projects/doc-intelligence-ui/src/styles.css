@@ -17,3 +17,17 @@ html, body {
 body {
   line-height: 1.5;
 }
+
+/* ── Dark Mode ───────────────────────────────────────────────────────────── */
+html.dark {
+  filter: invert(0.9) hue-rotate(180deg);
+  background: #ffffff;
+}
+
+/* Re-invert media elements so photos/icons don't look weird */
+html.dark img,
+html.dark video,
+html.dark iframe,
+html.dark canvas {
+  filter: invert(1) hue-rotate(180deg);
+}

@@ -1,4 +1,5 @@
 import { ProcessingStatus, DocumentType } from './enums';
+import { AnalyzeResponse } from './api-response';
 
 /**
  * Represents a single uploaded document
@@ -46,4 +47,5 @@ export interface DocumentBatch {
   totalDocuments: number;
   processedDocuments: number;
   failedDocuments: number;
+  analysisResponse?: AnalyzeResponse;
 }

@@ -113,6 +113,13 @@ export class DocumentService {
   }
 
   /**
+   * Get entire history
+   */
+  getHistory(): DocumentBatch[] {
+    return this.documentHistorySubject.value;
+  }
+
+  /**
    * Get document from history
    */
   getHistoryItem(batchId: string): DocumentBatch | undefined {
@@ -129,6 +136,14 @@ export class DocumentService {
   }
 
   /**
+   * Replace entire history (used for auto-clear of old items)
+   */
+  replaceHistory(batches: DocumentBatch[]): void {
+    this.documentHistorySubject.next(batches);
+    this.saveHistoryToStorage(batches);
+  }
+
+  /**
    * Clear entire history
    */
   clearHistory(): void {
@@ -142,6 +157,19 @@ export class DocumentService {
   setAnalysisResults(results: AnalyzeResponse, resultId: string): void {
     this.analysisResultsSubject.next(results);
     this.latestResultIdSubject.next(resultId);
+    
+    // Update the batch with analysis results (for historical documents)
+    const batches = this.documentHistorySubject.value;
+    const batchIndex = batches.findIndex(b => b.id === resultId);
+    if (batchIndex >= 0) {
+      const batch = batches[batchIndex];
+      const enrichedBatch = this.enrichBatchWithAnalysis(batch, results);
+      // Store the full analysis response in the batch for later retrieval
+      enrichedBatch.analysisResponse = results;
+      batches[batchIndex] = enrichedBatch;
+      this.documentHistorySubject.next([...batches]);
+      this.saveHistoryToStorage(batches);
+    }
   }
 
   /**
@@ -156,6 +184,14 @@ export class DocumentService {
    */
   getLatestResultId(): string | null {
     return this.latestResultIdSubject.value;
+  }
+
+  /**
+   * Get analysis results by batch ID
+   */
+  getAnalysisResultsByBatchId(batchId: string): AnalyzeResponse | null {
+    const batch = this.getHistoryItem(batchId);
+    return batch?.analysisResponse || null;
   }
 
   /**
@@ -189,6 +225,28 @@ export class DocumentService {
     } catch (error) {
       console.error('Failed to load history from storage:', error);
     }
+  }
+
+  /**
+   * Enrich batch documents with doc_type from analysis results
+   * This is used to update documents that were analyzed before the fix
+   */
+  enrichBatchWithAnalysis(batch: DocumentBatch, analysisResults: AnalyzeResponse): DocumentBatch {
+    return {
+      ...batch,
+      documents: batch.documents.map((doc, index) => {
+        if (index < analysisResults.processed_documents.length) {
+          const processed = analysisResults.processed_documents[index];
+          const docType = (processed.doc_type || 'unknown').toLowerCase();
+          return {
+            ...doc,
+            documentType: docType as any,
+            documentTypeConfidence: processed.doc_type_confidence
+          };
+        }
+        return doc;
+      })
+    };
   }
 
   /**

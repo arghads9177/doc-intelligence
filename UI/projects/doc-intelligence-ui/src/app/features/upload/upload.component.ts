@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { DocumentService } from '../../shared/services/document.service';
 import { ApiService } from '../../shared/services/api.service';
 import { NotificationService } from '../../shared/services/notification.service';
+import { SettingsService } from '../../shared/services/settings.service';
 import { Document } from '../../shared/models';
 
 @Component({
@@ -169,10 +170,16 @@ export class UploadComponent implements OnInit, OnDestroy {
     private documentService: DocumentService,
     private apiService: ApiService,
     private notificationService: NotificationService,
+    private settingsService: SettingsService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
+    // Initialise toggles from persisted settings
+    const s = this.settingsService.current;
+    this.includeValidation = s.includeValidation;
+    this.includeSummary = s.includeSummary;
+
     // Clear documents on component load
     this.documentService.clearDocuments();
     
@@ -223,6 +230,15 @@ export class UploadComponent implements OnInit, OnDestroy {
   }
 
   private processFiles(files: FileList): void {
+    const batchSize = this.settingsService.current.batchSize;
+    const currentCount = this.uploadedDocuments.length;
+    const remaining = batchSize - currentCount;
+
+    if (remaining <= 0) {
+      this.notificationService.warning(`Batch size limit of ${batchSize} documents reached. Adjust in Settings.`);
+      return;
+    }
+
     const validFiles: File[] = [];
     let hasInvalidFiles = false;
 
@@ -246,17 +262,25 @@ export class UploadComponent implements OnInit, OnDestroy {
       validFiles.push(file);
     }
 
-    if (validFiles.length > 0) {
+    // Enforce batch size: only take as many as the remaining slots allow
+    const filesToAdd = validFiles.slice(0, remaining);
+    const truncated = validFiles.length > remaining;
+
+    if (filesToAdd.length > 0) {
       // Add valid files to document service and store File objects
-      validFiles.forEach((file) => {
+      filesToAdd.forEach((file) => {
         const doc = this.documentService.addDocument(file.name, file.size, file.type);
         this.fileMap.set(doc.id, file);
       });
 
-      this.notificationService.success(`${validFiles.length} file(s) added`);
+      if (truncated) {
+        this.notificationService.warning(`Only ${filesToAdd.length} of ${validFiles.length} files added — batch limit of ${batchSize} reached.`);
+      } else {
+        this.notificationService.success(`${filesToAdd.length} file(s) added`);
+      }
     }
 
-    if (hasInvalidFiles && validFiles.length === 0) {
+    if (hasInvalidFiles && filesToAdd.length === 0) {
       this.notificationService.error('No valid files to upload');
     }
   }
@@ -273,6 +297,16 @@ export class UploadComponent implements OnInit, OnDestroy {
     if (this.fileInputRef) {
       this.fileInputRef.nativeElement.value = '';
     }
+  }
+
+  private mapDocumentType(typeStr: string): string {
+    const typeMap: { [key: string]: string } = {
+      'invoice': 'invoice',
+      'receipt': 'receipt',
+      'contract': 'contract',
+      'unknown': 'unknown'
+    };
+    return typeMap[typeStr?.toLowerCase()] || 'unknown';
   }
 
   submitDocuments(): void {
@@ -306,21 +340,36 @@ export class UploadComponent implements OnInit, OnDestroy {
           this.isProcessing = false;
           this.notificationService.success(`Successfully analyzed ${response.processed_documents.length} document(s)`);
 
-          // Store results in service and generate result ID
-          const resultId = this.documentService.generateBatchId();
-          this.documentService.setAnalysisResults(response, resultId);
+          // Update documents with analysis results (doc_type, confidence)
+          const updatedDocuments = this.uploadedDocuments.map((doc, index) => {
+            if (index < response.processed_documents.length) {
+              const processed = response.processed_documents[index];
+              return {
+                ...doc,
+                documentType: this.mapDocumentType(processed.doc_type) as any,
+                documentTypeConfidence: processed.doc_type_confidence
+              };
+            }
+            return doc;
+          });
 
-          // Save to history
+          // Generate result ID
+          const resultId = this.documentService.generateBatchId();
+
+          // Save to history with updated documents
           const batch = {
             id: resultId,
             createdAt: new Date(),
             completedAt: new Date(),
-            documents: this.uploadedDocuments,
-            totalDocuments: this.uploadedDocuments.length,
+            documents: updatedDocuments,
+            totalDocuments: updatedDocuments.length,
             processedDocuments: response.total_processed,
             failedDocuments: response.total_errors
           };
           this.documentService.addToHistory(batch);
+
+          // Store results in service (this will enrich the batch with analysis data)
+          this.documentService.setAnalysisResults(response, resultId);
 
           // Navigate to results page
           setTimeout(() => {

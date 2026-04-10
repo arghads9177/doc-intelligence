@@ -53,21 +53,33 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private subscribeToDocuments(): void {
     this.documentService.documentHistory$.pipe(
       takeUntil(this.destroy$)
-    ).subscribe(documents => {
-      this.calculateStats(documents);
-      this.recentDocuments = documents.slice(0, 5).reverse();
-      this.generateProcessingStats(documents);
+    ).subscribe(batches => {
+      this.calculateStats(batches);
+      // Transform batches to document display format
+      this.recentDocuments = batches.slice(0, 5).reverse().flatMap(batch => 
+        batch.documents.map(doc => ({
+          id: batch.id,
+          name: doc.filename,
+          type: doc.documentType || 'unknown',
+          status: batch.completedAt ? 'completed' : 'processing',
+          date: batch.createdAt,
+          processingTime: 0, // Will be calculated or fetched from analysis
+          confidence: doc.documentTypeConfidence || 0
+        }))
+      );
+      this.generateProcessingStats(batches);
     });
   }
 
   private loadDashboardData(): void {
     // Simulated data - in production, fetch from backend
+    // Use recent dates within the last 7 days for mock data
     const mockDocuments = [
-      { id: 1, name: 'Invoice_001.pdf', type: 'invoice', status: 'completed', date: new Date(Date.now() - 1000000), processingTime: 12 },
-      { id: 2, name: 'Receipt_Bank.pdf', type: 'receipt', status: 'completed', date: new Date(Date.now() - 2000000), processingTime: 8 },
-      { id: 3, name: 'Contract_Q1.pdf', type: 'contract', status: 'completed', date: new Date(Date.now() - 3000000), processingTime: 15 },
-      { id: 4, name: 'Invoice_002.pdf', type: 'invoice', status: 'completed', date: new Date(Date.now() - 4000000), processingTime: 11 },
-      { id: 5, name: 'Receipt_Store.pdf', type: 'receipt', status: 'completed', date: new Date(Date.now() - 5000000), processingTime: 9 }
+      { id: 1, name: 'Invoice_001.pdf', type: 'invoice', status: 'completed', date: new Date(Date.now() - 86400000), processingTime: 12 }, // 1 day ago
+      { id: 2, name: 'Receipt_Bank.pdf', type: 'receipt', status: 'completed', date: new Date(Date.now() - 172800000), processingTime: 8 }, // 2 days ago
+      { id: 3, name: 'Contract_Q1.pdf', type: 'contract', status: 'completed', date: new Date(Date.now() - 259200000), processingTime: 15 }, // 3 days ago
+      { id: 4, name: 'Invoice_002.pdf', type: 'invoice', status: 'completed', date: new Date(Date.now() - 345600000), processingTime: 11 }, // 4 days ago
+      { id: 5, name: 'Receipt_Store.pdf', type: 'receipt', status: 'completed', date: new Date(Date.now() - 432000000), processingTime: 9 } // 5 days ago
     ];
 
     this.calculateStats(mockDocuments);
@@ -75,20 +87,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.generateProcessingStats(mockDocuments);
   }
 
-  private calculateStats(documents: any[]): void {
-    const total = documents.length;
-    const completed = documents.filter(d => d.status === 'completed').length;
-    const successRate = total > 0 ? ((completed / total) * 100).toFixed(1) : 0;
-    const avgProcessingTime = total > 0 
-      ? (documents.reduce((sum, d) => sum + (d.processingTime || 0), 0) / total).toFixed(1)
-      : 0;
+  private calculateStats(batches: any[]): void {
+    // Handle both DocumentBatch and mock document structures
+    let totalDocs = 0;
+    let processedDocs = 0;
+    let totalProcessingTime = 0;
+    let docCount = 0;
 
-    const typeDistribution = this.calculateTypeDistribution(documents);
+    batches.forEach(batch => {
+      if (batch.totalDocuments !== undefined) {
+        // This is a DocumentBatch structure
+        totalDocs += batch.totalDocuments;
+        processedDocs += batch.processedDocuments;
+      } else if (batch.status !== undefined) {
+        // This is a mock document structure
+        totalDocs++;
+        if (batch.status === 'completed') processedDocs++;
+        if (batch.processingTime) {
+          totalProcessingTime += batch.processingTime;
+          docCount++;
+        }
+      }
+    });
+
+    const successRate = totalDocs > 0 ? ((processedDocs / totalDocs) * 100).toFixed(1) : 0;
+    
+    // For processing time, use analysis time or avg from available data
+    let avgProcessingTime = '0';
+    if (docCount > 0) {
+      avgProcessingTime = (totalProcessingTime / docCount).toFixed(1);
+    }
+
+    const typeDistribution = this.calculateTypeDistribution(batches);
 
     this.stats = [
       {
         label: 'Total Documents',
-        value: total,
+        value: totalDocs,
         icon: '📄',
         color: 'text-blue-600',
         bgColor: 'bg-blue-50'
@@ -121,42 +156,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.documentTypeStats = typeDistribution;
   }
 
-  private calculateTypeDistribution(documents: any[]): DocumentTypeStat[] {
+  private calculateTypeDistribution(batches: any[]): DocumentTypeStat[] {
     const typeCounts: { [key: string]: number } = {};
-    documents.forEach(doc => {
-      const type = doc.type || 'unknown';
-      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    let totalDocs = 0;
+
+    batches.forEach(batch => {
+      if (batch.documents && Array.isArray(batch.documents)) {
+        // DocumentBatch structure
+        batch.documents.forEach((doc: any) => {
+          totalDocs++;
+          const type = (doc.documentType || 'unknown').toLowerCase();
+          typeCounts[type] = (typeCounts[type] || 0) + 1;
+        });
+      } else if (batch.type !== undefined) {
+        // Mock document structure
+        totalDocs++;
+        const type = batch.type || 'unknown';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+      }
     });
 
-    const total = documents.length;
     const colors = ['bg-blue-500', 'bg-green-500', 'bg-orange-500', 'bg-purple-500', 'bg-red-500'];
     
     return Object.entries(typeCounts)
       .map((entry, index) => ({
         type: entry[0],
         count: entry[1],
-        percentage: total > 0 ? Math.round((entry[1] / total) * 100) : 0,
+        percentage: totalDocs > 0 ? Math.round((entry[1] / totalDocs) * 100) : 0,
         color: colors[index % colors.length]
       }))
       .sort((a, b) => b.count - a.count);
   }
 
-  private generateProcessingStats(documents: any[]): void {
-    // Generate last 7 days of stats
+  private generateProcessingStats(batches: any[]): void {
+    // Generate last 7 days of stats - use a helper function for consistent date formatting
     const stats: { [key: string]: number } = {};
     
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateStr = this.formatDateForChart(date);
       stats[dateStr] = 0;
     }
 
-    documents.forEach(doc => {
-      if (doc.date) {
-        const dateStr = new Date(doc.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    batches.forEach((batch) => {
+      let dateToCheck: Date | null = null;
+
+      if (batch.createdAt) {
+        // DocumentBatch structure
+        dateToCheck = new Date(batch.createdAt);
+      } else if (batch.date) {
+        // Mock document structure
+        dateToCheck = new Date(batch.date);
+      }
+
+      if (dateToCheck) {
+        const dateStr = this.formatDateForChart(dateToCheck);
+        
         if (dateStr in stats) {
-          stats[dateStr]++;
+          // For DocumentBatch, count all documents in the batch, not the batch itself
+          if (batch.totalDocuments !== undefined) {
+            stats[dateStr] += batch.totalDocuments;
+          } else {
+            stats[dateStr]++;
+          }
         }
       }
     });
@@ -171,14 +234,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.totalWeekCount = this.processingStats.reduce((sum, s) => sum + s.count, 0);
   }
 
+  private formatDateForChart(date: Date): string {
+    // Ensure consistent date formatting for chart labels
+    // Use local date string in 'Short Mon Day' format
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
   getTypeIcon(type: string): string {
     const icons: { [key: string]: string } = {
-      'invoice': '🧾',
-      'receipt': '🛒',
-      'contract': '⚖️',
-      'default': '📄'
+      'invoice': '📋',
+      'receipt': '🧾',
+      'contract': '📜',
+      'unknown': '📄'
     };
-    return icons[type] || icons['default'];
+    return icons[(type || 'unknown').toLowerCase()] || icons['unknown'];
   }
 
   formatDate(date: Date): string {

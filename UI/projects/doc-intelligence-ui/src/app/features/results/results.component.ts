@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DocumentService } from '../../shared/services/document.service';
@@ -203,6 +203,15 @@ import { takeUntil } from 'rxjs/operators';
         <div *ngIf="!analysisResults" class="text-center py-12">
           <p class="text-gray-600 text-lg">Loading analysis results...</p>
         </div>
+
+        <!-- Not Found State -->
+        <div *ngIf="notFound" class="text-center py-12 bg-red-50 rounded-lg border border-red-200">
+          <p class="text-red-700 text-lg font-semibold mb-4">Analysis results not found</p>
+          <p class="text-red-600 mb-6">The batch ID "{{ batchId }}" could not be located.</p>
+          <button (click)="goBack()" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold transition-colors">
+            ← Back to Upload
+          </button>
+        </div>
       </div>
     </div>
   `,
@@ -211,19 +220,54 @@ import { takeUntil } from 'rxjs/operators';
 export class ResultsComponent implements OnInit, OnDestroy {
   analysisResults: AnalyzeResponse | null = null;
   activeTab: 'fields' | 'validation' | 'summary' = 'fields';
+  batchId: string | null = null;
+  notFound: boolean = false;
   private destroy$ = new Subject<void>();
 
   constructor(
     private documentService: DocumentService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
+    // Get batch ID from route parameter
+    this.route.params.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      const batchId = params['id'];
+      if (batchId) {
+        this.batchId = batchId;
+        // Fetch analysis results for this specific batch
+        const results = this.documentService.getAnalysisResultsByBatchId(batchId);
+        if (results) {
+          this.analysisResults = results;
+          this.notFound = false;
+        } else {
+          // If not found in local storage, try the current observable (for fresh uploads)
+          const currentResults = this.documentService.getAnalysisResults();
+          const latestId = this.documentService.getLatestResultId();
+          if (currentResults && latestId === batchId) {
+            this.analysisResults = currentResults;
+            this.notFound = false;
+          } else {
+            this.notFound = true;
+          }
+        }
+        // Force change detection
+        this.cdr.markForCheck();
+      }
+    });
+
+    // Also subscribe to analysis results in case it gets updated
     this.documentService.analysisResults$
       .pipe(takeUntil(this.destroy$))
       .subscribe((results) => {
-        this.analysisResults = results;
+        // Only update if this is for the current batch
+        if (this.batchId && this.documentService.getLatestResultId() === this.batchId) {
+          this.analysisResults = results;
+          this.notFound = false;
+          this.cdr.markForCheck();
+        }
       });
   }
 
